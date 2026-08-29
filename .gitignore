@@ -1,0 +1,87 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.eggs/
+*.egg
+
+# 编译/分发
+build/
+dist/
+*.spec.bak
+MANIFEST
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# ============================================
+# IDE / 编辑器
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# 敏感信息（绝对不能推）
+# ============================================
+# 真实 .env 文件（.env.example 是模板，会被推）
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# API key 相关（万一日志里出现过 key）
+secrets/
+credentials/
+api_keys/
+
+# ============================================
+# 项目特定
+# ============================================
+# 日志
+*.log
+game_ops_monitor.log
+logs/
+
+# 业务数据
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/cache/
+
+# 抓取结果
+data/exports/
+data/raw/
+
+# ============================================
+# PyInstaller / 打包
+# ============================================
+release/
+*.build/
+*.dist/
+__pypackages__/
+
+# ============================================
+# 测试
+# ============================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+.mypy_cache/
+.ruff_cache/

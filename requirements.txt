@@ -1,0 +1,22 @@
+# Core
+pydantic>=2.0
+PyYAML>=6.0
+python-dotenv>=1.0
+
+# LLM (OpenAI 兼容协议，minimax 等)
+openai>=1.40.0
+
+# Google Play 抓取
+google-play-scraper>=1.2.4
+
+# Discord (预留，等用户接入时安装)
+# discord.py>=2.3.0
+
+# Storage
+# (sqlite3 是标准库)
+
+# GUI (后续)
+# PyQt6>=6.6.0
+
+# Dev
+pytest>=8.0
