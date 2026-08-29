@@ -104,6 +104,59 @@ QPushButton:hover {
     background: #f0f0f0;
     border-color: #2196F3;
 }
+QPushButton:pressed {
+    background: #d0d0d0;
+    border-color: #1976D2;
+    padding-top: 7px;
+    padding-bottom: 5px;
+    padding-left: 17px;
+    padding-right: 15px;
+}
+QPushButton:disabled {
+    color: #bbb;
+    background: #f8f8f8;
+}
+
+QToolButton {
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+}
+QToolButton:hover {
+    background: #f0f0f0;
+    border-color: #d0d0d0;
+}
+QToolButton:pressed {
+    background: #d0d0d0;
+}
+QToolButton:checked {
+    background: #2196F3;
+    color: white;
+    border-color: #1976D2;
+}
+
+QCheckBox {
+    spacing: 6px;
+}
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #d0d0d0;
+    border-radius: 3px;
+    background: white;
+}
+QCheckBox::indicator:hover {
+    border-color: #2196F3;
+}
+QCheckBox::indicator:checked {
+    background: #2196F3;
+    border-color: #1976D2;
+    image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNiAxNiI+PHBvbHlsaW5lIHBvaW50cz0iMyw4IDcsMTIgMTMsNCIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+PC9zdmc+);
+}
+QCheckBox::indicator:pressed {
+    background: #1976D2;
+}
 
 QStatusBar {
     background: white;
@@ -118,8 +171,10 @@ class MainWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("🎮 Game Ops Monitor")
+        self.setWindowTitle("🎮 Game Ops Monitor v0.7.2")
         self.resize(1400, 900)
+        # 最小尺寸：保证 1080p 屏幕能完整显示（缩放后 ≈ 900x600）
+        self.setMinimumSize(960, 600)
         self.setStyleSheet(STYLE)
         
         # 状态
@@ -131,6 +186,22 @@ class MainWindow(QMainWindow):
         self._storage = SQLiteStore(
             self._config.get("storage", {}).get("db_path", "data/monitor.db")
         )
+
+        # 启动时打印关键文件路径（方便确认跑的是不是新代码）
+        import os
+        for rel in ["src/gui/main_window.py", "src/gui/widgets/detail_panel.py",
+                    "src/gui/widgets/complaint_list.py", "src/gui/widgets/overview.py"]:
+            fp = os.path.abspath(rel)
+            if os.path.exists(fp):
+                mtime = os.path.getmtime(fp)
+                logger.info(f"[版本检查] {rel}  mtime={mtime:.0f}  size={os.path.getsize(fp)}B")
+            else:
+                logger.warning(f"[版本检查] {rel} 不存在！")
+
+        # 启动时强制提示版本号（写到状态栏，避免被忽略）
+        QTimer.singleShot(1000, lambda: self.status_bar.showMessage(
+            f"✅ v0.6.4 已启动 · 当前时间 {datetime.now().strftime('%H:%M:%S')}", 5000
+        ))
         
         self._build_ui()
         self._build_menu()
@@ -160,17 +231,21 @@ class MainWindow(QMainWindow):
         # 主分割：列表 + 详情
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(4)
-        
+        splitter.setChildrenCollapsible(False)  # 防止把一侧压成 0
+
         self.complaint_list = ComplaintListWidget()
         splitter.addWidget(self.complaint_list)
-        
+
         self.detail_panel = DetailPanel()
+        self.detail_panel.setMinimumWidth(420)  # 保证 detail panel 至少 420px 宽
         splitter.addWidget(self.detail_panel)
-        
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-        splitter.setSizes([840, 560])
-        
+
+        # 5:4 比例：list 略大，detail 也不少
+        splitter.setStretchFactor(0, 5)
+        splitter.setStretchFactor(1, 4)
+        splitter.setSizes([750, 650])  # 默认 detail 占 650px（更大）
+
+        self.main_splitter = splitter  # 保存引用
         layout.addWidget(splitter, 1)  # stretch
         
         # 状态栏
@@ -228,8 +303,12 @@ class MainWindow(QMainWindow):
         self.complaint_list.delete_requested.connect(self._on_delete_requested)
         self.complaint_list.mark_requested.connect(self._on_mark_requested)
         self.complaint_list.clear_all_requested.connect(self._on_clear_all_requested)
+        # 统计卡片点击 → 应用筛选
+        self.overview.filter_clicked.connect(self._on_overview_filter)
         # 取消按钮
         self.source_panel.cancel_btn.clicked.connect(self.cancel_fetch)
+        # 模式切换：调整下方布局
+        self.source_panel.mode_changed.connect(self._on_source_mode_changed)
     
     # ---- 抓取流程 ----
     
@@ -395,6 +474,42 @@ class MainWindow(QMainWindow):
             logger.exception("刷新失败")
             self.status_bar.showMessage(f"❌ 刷新失败: {e}")
 
+    def _on_overview_filter(self, filter_dict: dict):
+        """统计卡片被点击 → 应用对应筛选"""
+        # 把 filter 套用到 list（控件同步会触发 refresh）
+        self.complaint_list.apply_filter(filter_dict)
+        # 状态栏提示
+        label = filter_dict.get("label", "筛选")
+        self.status_bar.showMessage(f"🔍 已按「{label}」筛选")
+
+    def _on_source_mode_changed(self, mode: str):
+        """source panel 模式切换：调整下方 splitter 高度
+
+        切到"目标管理"：折叠客诉列表 + 详情，source panel 占满纵向空间
+        切回"快速抓取"：还原列表 + 详情
+        """
+        layout = self.centralWidget().layout()
+        if mode == "target":
+            self.complaint_list.setVisible(False)
+            self.detail_panel.setVisible(False)
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                w = item.widget() if item else None
+                if w is self.source_panel:
+                    layout.setStretchFactor(w, 10)
+                elif w is self.main_splitter:
+                    layout.setStretchFactor(w, 0)
+        else:
+            self.complaint_list.setVisible(True)
+            self.detail_panel.setVisible(True)
+            for i in range(layout.count()):
+                item = layout.itemAt(i)
+                w = item.widget() if item else None
+                if w is self.source_panel:
+                    layout.setStretchFactor(w, 0)
+                elif w is self.main_splitter:
+                    layout.setStretchFactor(w, 10)
+
     # ---- 列表操作：标记 / 删除 / 清空 ----
 
     def _on_delete_requested(self, message_ids: list[int]):
@@ -520,7 +635,8 @@ class MainWindow(QMainWindow):
             self._settings_dialog.raise_()
             self._settings_dialog.activateWindow()
         else:
-            self.status_bar.showMessage(f"✓ 已加载 API Key: {api_key[:8]}...")
+            # ⚠️ 出于安全考虑：不在 UI 显示 key（哪怕前 8 位）。只显示"已配置"
+            self.status_bar.showMessage("✅ minimax API Key 已配置")
     
     def show_about(self):
         QMessageBox.about(

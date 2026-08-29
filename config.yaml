@@ -1,56 +1,40 @@
-# Game Ops Monitor 配置
-# 编辑此文件配置监控目标
-
-# 数据源
 sources:
-  # Google Play 商店评论
   google_play:
     enabled: true
     targets:
-      - id: com.supercell.clashroyale
-        name: "部落冲突"
-        country: cn
-        lang: zh
-        enabled: true
-      - id: com.supercell.brawlstars
-        name: "荒野乱斗"
-        country: us
-        lang: en
-        enabled: true
-      # 添加你的游戏...
-
-  # Discord 频道（待实现）
+    - id: com.supercell.clashroyale
+      name: 部落冲突
+      country: cn
+      lang: zh
+      limit: 20
+      days: 7
+      notes: ''
+      enabled: true
+    - id: com.supercell.brawlstars
+      name: 荒野乱斗
+      country: cn
+      lang: zh
+      limit: 20
+      days: 7
+      notes: ''
+      enabled: false
   discord:
     enabled: false
     targets: []
-    # 示例结构:
-    # - guild_id: "123456789"
-    #   name: "官方服务器"
-    #   channel_ids:
-    #     - "111111"
-    #     - "222222"
-
-# LLM 配置
 llm:
-  provider: minimax  # minimax | openai | anthropic
+  provider: minimax
   api_key_env: MINIMAX_API_KEY
   base_url_env: MINIMAX_BASE_URL
   model: MiniMax-M2.5
   temperature: 0.1
-  max_concurrent: 5  # 并发请求数
-  batch_size: 10     # 单次 prompt 批处理条数
-
-# 抓取配置
+  max_concurrent: 5
+  batch_size: 10
 fetch:
   default_limit: 50
   max_limit: 500
-  rate_limit_per_minute: 30  # 防止被 Google Play 限流
-
-# 存储
+  rate_limit_per_minute: 30
 storage:
   db_path: data/monitor.db
-
-# 分类阈值
 classification:
-  min_urgency_to_alert: 4  # 紧急度 >= 4 触发高亮
-  skip_non_complaints: true  # 是否只存储客诉
+  min_urgency_to_alert: 4
+  skip_non_complaints: true

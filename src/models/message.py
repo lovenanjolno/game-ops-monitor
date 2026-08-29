@@ -27,6 +27,7 @@ class Category(str, Enum):
     CONFLICT = "conflict"           # 玩家间冲突
     TECH = "tech"                   # 系统兼容性
     MONETIZATION = "monetization"   # 商业相关
+    OTHER = "other"                 # 其他（不能归入上述任何分类）
     NOT_COMPLAINT = None            # 非客诉（用 None 表示，避免误判）
 
 

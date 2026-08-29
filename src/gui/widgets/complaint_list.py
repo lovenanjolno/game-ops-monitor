@@ -195,6 +195,7 @@ class ComplaintListWidget(QWidget):
         self.filter_category.addItem("🎮 玩法", "gameplay")
         self.filter_category.addItem("⚔ 冲突", "conflict")
         self.filter_category.addItem("💰 商业", "monetization")
+        self.filter_category.addItem("📦 其他", "other")
         self.filter_category.currentIndexChanged.connect(self._on_filter_changed)
         filter_bar.addWidget(self.filter_category)
 
@@ -404,6 +405,30 @@ class ComplaintListWidget(QWidget):
             "only_complaints": self.only_complaints_check.isChecked(),
             "hide_handled": self.hide_handled_check.isChecked(),
         }
+
+    def apply_filter(self, filter_dict: dict):
+        """从外部（统计卡片）应用一组筛选条件，触发刷新。
+
+        filter_dict: { only_complaints, category, min_urgency, max_urgency, ... }
+        注意：max_urgency 在 SQL 不直接支持，refresh_data 里用 min_urgency 处理即可
+        """
+        # 同步控件
+        if "only_complaints" in filter_dict:
+            self.only_complaints_check.setChecked(bool(filter_dict["only_complaints"]))
+        if "category" in filter_dict:
+            cat = filter_dict["category"]
+            for i in range(self.filter_category.count()):
+                if self.filter_category.itemData(i) == cat:
+                    self.filter_category.setCurrentIndex(i)
+                    break
+        if "min_urgency" in filter_dict:
+            min_urg = filter_dict["min_urgency"]
+            for i in range(self.filter_urgency.count()):
+                if self.filter_urgency.itemData(i) == min_urg:
+                    self.filter_urgency.setCurrentIndex(i)
+                    break
+        # 触发刷新
+        self.refresh_requested.emit()
 
     # ---- 外部触发：行级局部刷新（标记后无闪烁） ----
 
